@@ -1,0 +1,21 @@
+.env
+.env.*
+*.zip
+*.tar
+*.gz
+*.sql
+*.dump
+*.log
+
+# No incluir copias de los proyectos institucionales.
+design-software-*/
+microservicio/
+infraestructura/
+base-datos/
+
+# Archivos locales y temporales.
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
