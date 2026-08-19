@@ -61,6 +61,8 @@ subject: Demostracion HU-001
 
 La consulta de verificación confirmó el mismo UUID en `notification.sent_notification`, con destinatario ficticio, canal `EMAIL`, estado `PENDING` y servicio de origen `recognition-demo`.
 
+La ejecución reproducible realizada desde PowerShell generó además el UUID `4055e79f-f511-4f9a-89ce-b875c59fb5a6` con estado `PENDING`, confirmando que la demostración puede repetirse desde el equipo local.
+
 ## Demostración de validación
 
 Se envió una solicitud con canal `SMS`, que no pertenece al contrato. La API respondió:
@@ -79,8 +81,24 @@ Esto demuestra que una solicitud inválida es rechazada antes de llegar al caso 
 ## Evidencias
 
 - Diagrama: [`diagramas/flujo-hu-001.md`](diagramas/flujo-hu-001.md)
-- Capturas: se agregarán desde la ejecución final para evitar mostrar credenciales o información de otros proyectos.
+- Guía reproducible: [`comandos.md`](comandos.md)
 - Video: se integrará en el video general de la actividad.
+
+### 1. API iniciada
+
+![API iniciada en el puerto 8080](capturas/01-api-iniciada.png)
+
+### 2. Liveness y readiness
+
+![Health y ready con base de datos disponible](capturas/02-health-ready.png)
+
+### 3. Solicitud válida
+
+![POST de notificación aceptado con estado PENDING](capturas/03-post-notification.png)
+
+### 4. Validación de canal
+
+![Canal SMS rechazado por validación](capturas/04-validacion-canal.png)
 
 ## Mejora propuesta
 
@@ -91,4 +109,3 @@ También conviene devolver explícitamente `Location: /notifications/{id}` en la
 ## Guion para la sustentación
 
 > En la HU-001 el microservicio expone `POST /notifications`. El adaptador HTTP valida el contrato y permite únicamente EMAIL o IN_APP. Después delega al caso de uso, que crea la notificación en estado PENDING, y el repositorio la guarda en PostgreSQL. La respuesta es 202 porque la solicitud fue aceptada, pero la entrega todavía no es parte de este flujo. En la demostración envié una solicitud válida, comprobé el UUID en la base de datos y luego envié un canal SMS para evidenciar la validación con respuesta 400.
-
