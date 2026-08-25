@@ -1,0 +1,18 @@
+[project]
+name = "design-software-notification-service"
+version = "1.0.0"
+description = "FastAPI migration of design-software notification-service"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["integration: tests requiring PostgreSQL/RabbitMQ/SMTP infrastructure"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

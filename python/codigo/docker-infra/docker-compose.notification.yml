@@ -1,0 +1,89 @@
+services:
+  notification-db-migrate:
+    build: .
+    image: ds-liquibase:latest
+    profiles: [notification]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /workspace
+    volumes:
+      - ../design-software-notification-db:/workspace:ro
+    entrypoint:
+      - liquibase
+      - --search-path=/workspace
+      - --changeLogFile=changelog/changelog-master.yaml
+      - --url=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - --username=${POSTGRES_USER}
+      - --password=${POSTGRES_PASSWORD}
+      - update
+
+  notification-app-user:
+    image: postgres:16-alpine
+    profiles: [notification]
+    depends_on:
+      notification-db-migrate:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - ./bootstrap-notification-user.sh:/bootstrap-notification-user.sh:ro
+    entrypoint: ["/bin/sh", "/bootstrap-notification-user.sh"]
+
+  notification-api:
+    build:
+      context: ../notification-service
+      dockerfile: deploy/Dockerfile.api
+    image: design-software-notification-api:fastapi
+    profiles: [notification]
+    depends_on:
+      notification-app-user:
+        condition: service_completed_successfully
+    environment:
+      NOTIFICATION_DB_DSN: postgres://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      NOTIFICATION_DEPLOYMENT_ENVIRONMENT: ${NOTIFICATION_DEPLOYMENT_ENVIRONMENT:-develop}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-otel-collector:4317}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      PORT: "8080"
+    ports:
+      - "${NOTIFICATION_API_PORT:-18081}:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  notification-worker:
+    build:
+      context: ../notification-service
+      dockerfile: deploy/Dockerfile.worker
+    image: design-software-notification-worker:fastapi
+    profiles: [notification]
+    depends_on:
+      notification-app-user:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    environment:
+      NOTIFICATION_DB_DSN: postgres://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      NOTIFICATION_AMQP_URL: amqp://${RABBITMQ_USER:-app}:${RABBITMQ_PASSWORD:-app}@rabbitmq:5672/
+      NOTIFICATION_SMTP_ADDR: mailhog:1025
+      NOTIFICATION_SMTP_FROM: ${NOTIFICATION_SMTP_FROM:-notifications@sena.local}
+      NOTIFICATION_RECIPIENT_STUB_EMAIL: ${NOTIFICATION_RECIPIENT_STUB_EMAIL:-dev-notifications@sena.local}
+      NOTIFICATION_DEPLOYMENT_ENVIRONMENT: ${NOTIFICATION_DEPLOYMENT_ENVIRONMENT:-develop}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-otel-collector:4317}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      WORKER_HEALTH_PORT: "8081"
+    ports:
+      - "${NOTIFICATION_WORKER_HEALTH_PORT:-18082}:8081"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=2).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10

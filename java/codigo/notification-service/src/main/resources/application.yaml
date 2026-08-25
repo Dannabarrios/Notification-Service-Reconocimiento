@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: notification-service
+  profiles:
+    default: api
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+      deployment.environment: ${NOTIFICATION_DEPLOYMENT_ENVIRONMENT:develop}
+
+notification:
+  outbox:
+    poll-interval-ms: 2000
+    batch-size: 20

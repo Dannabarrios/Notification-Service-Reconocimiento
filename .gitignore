@@ -3,19 +3,22 @@
 *.zip
 *.tar
 *.gz
-*.sql
 *.dump
 *.log
 
-# No incluir copias de los proyectos institucionales.
-design-software-*/
-microservicio/
-infraestructura/
-base-datos/
+# Código fuente sí incluido; nunca incluir metadatos ni artefactos locales.
+**/.git/
+**/target/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+**/*.class
 
 # Archivos locales y temporales.
 .DS_Store
 Thumbs.db
 *.tmp
 *.bak
-
+*.inspect.ndjson
